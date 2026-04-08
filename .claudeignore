@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Package locks (muy pesados, no aportan contexto)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# PHP utilitarios temporales (scripts de migración/check)
+check_db.php
+check_schema.php
+check_schema2.php
+check_users.php
+migrate.php
+reset_passwords.php
+qa_check.php
+full_seed.php
+test_api.php
+
+# Archivos generados / cache
+*.log
+*.cache
+tmp/
+.vite/
+
+# Config de herramientas (no aportan contexto de negocio)
+eslint.config.js
+postcss.config.js
+tailwind.config.js
+tsconfig*.json
+vite.config.ts

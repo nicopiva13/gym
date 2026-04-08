@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-amber: #f59e0b;
+  --primary-orange: #f97316;
+  --bg-dark: #09090b;
+  --bg-panel: #18181b;
+  --border-light: rgba(255, 255, 255, 0.05);
+}
+
+@layer base {
+  body {
+    @apply bg-[#09090b] text-white font-body antialiased;
+    font-family: 'DM Sans', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight text-white;
+    font-family: 'Barlow Condensed', sans-serif;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-zinc-900/40 backdrop-blur-xl border border-white/5 shadow-2xl;
+  }
+
+  .btn-primary {
+    @apply bg-amber-500 hover:bg-amber-600 text-black font-display font-black uppercase tracking-widest py-3 px-6 rounded-xl transition-all active:scale-95 shadow-[0_0_20px_rgba(245,158,11,0.2)];
+  }
+
+  .btn-secondary {
+    @apply bg-white/5 hover:bg-white/10 text-white font-display font-bold uppercase tracking-widest py-3 px-6 rounded-xl transition-all border border-white/10;
+  }
+
+  .form-input {
+    @apply w-full bg-zinc-900/50 border border-white/10 rounded-2xl py-4 px-6 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none transition-all font-body text-white placeholder:text-neutral-600;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-4 px-6 py-4 text-neutral-500 font-body font-bold uppercase tracking-widest text-[10px] hover:text-white hover:bg-white/5 rounded-2xl transition-all;
+  }
+
+  .nav-link.active {
+    @apply text-amber-500 bg-amber-500/5 border-l-2 border-amber-500;
+  }
+
+  /* Status Badges */
+  .badge-active { @apply bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest; }
+  .badge-expired { @apply bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest; }
+  .badge-soon { @apply bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest; }
+  .badge-none { @apply bg-zinc-500/10 text-zinc-500 border border-zinc-500/20 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest; }
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(php -r \":*)",
+      "Bash(mysql -u root -p1234 gym -e \"SELECT id, name, lastname, username, email, role, active FROM users; SELECT id, name, lastname, dni, active FROM clients;\")",
+      "Bash(curl -s http://localhost:8000/api/auth/admin/login -X POST -H \"Content-Type: application/json\" -d \"{\"\"username\"\":\"\"admin\"\",\"\"password\"\":\"\"admin123\"\"}\")",
+      "Bash(curl -s http://localhost:8000/api/auth/trainer/login -X POST -H \"Content-Type: application/json\" -d \"{\"\"username\"\":\"\"trainer\"\",\"\"password\"\":\"\"trainer123\"\"}\")",
+      "Bash(curl -s http://localhost:8000/api/auth/admin/login -X POST -H \"Content-Type: application/json\" -d \"{\"\"email\"\":\"\"admin@gym.com\"\",\"\"password\"\":\"\"admin123\"\"}\")",
+      "Bash(curl -s http://localhost:8000/api/auth/admin/login -X POST -H \"Content-Type: application/json\" -d \"{\"\"email\"\":\"\"owner@gym.com\"\",\"\"password\"\":\"\"admin123\"\"}\")"
+    ]
+  }
+}
