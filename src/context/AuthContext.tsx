@@ -34,7 +34,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (token) {
                 try {
                     // We can verify the token here if needed with a /auth/me call
-                    const response = await fetch('http://localhost:8000/api/auth/me', {
+                    const apiBase = import.meta.env.VITE_API_URL || 'http://76.13.163.126:8082/api';
+                    const response = await fetch(`${apiBase}/auth/me`, {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }

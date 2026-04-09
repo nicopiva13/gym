@@ -18,7 +18,8 @@ export default function TrainerManagement() {
 
     useEffect(() => {
         const token = localStorage.getItem('gym_token');
-        fetch('http://localhost:8000/api/staff', {
+        const apiBase = import.meta.env.VITE_API_URL || 'http://76.13.163.126:8082/api';
+        fetch(`${apiBase}/staff`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         })
             .then(r => r.json())
