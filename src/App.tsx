@@ -28,6 +28,7 @@ import ClientDetail from './pages/trainer/ClientDetail';
 import ExerciseLibrary from './pages/trainer/ExerciseLibrary';
 import TrainingPlans from './pages/trainer/TrainingPlans';
 import PlanBuilder from './pages/trainer/PlanBuilder';
+import TrainerPayments from './pages/trainer/TrainerPayments';
 
 // Client Page
 import ClientDashboard from './pages/client/ClientDashboard';
@@ -76,6 +77,7 @@ function App() {
           <Route path="/entrenador/planes" element={<PrivateRoute allowedRole="trainer"><TrainingPlans /></PrivateRoute>} />
           <Route path="/entrenador/planes/crear" element={<PrivateRoute allowedRole="trainer"><PlanBuilder /></PrivateRoute>} />
           <Route path="/entrenador/planes/:id/editar" element={<PrivateRoute allowedRole="trainer"><PlanBuilder /></PrivateRoute>} />
+          <Route path="/entrenador/caja" element={<PrivateRoute allowedRole="trainer"><TrainerPayments /></PrivateRoute>} />
 
           {/* CLIENT PORTAL */}
           <Route path="/usuario" element={<PrivateRoute allowedRole="client"><ClientDashboard /></PrivateRoute>} />

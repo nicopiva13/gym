@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
-import { Plus, Zap, Edit2, Trash2, X, Save } from 'lucide-react';
+import { Plus, Zap, Edit2, ToggleLeft, ToggleRight, X, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const EMPTY = { name: '', price: '', duration_days: '30', description: '' };
@@ -46,10 +46,11 @@ export default function MembershipPlans() {
         setSaving(false);
     };
 
-    const handleDelete = async (p: any) => {
-        if (!confirm(`¿Eliminar el plan "${p.name}"?`)) return;
-        try { await api.deleteMembershipPlan(p.id); fetchPlans(); }
-        catch (err: any) { alert('Error: ' + err.message); }
+    const handleToggleActive = async (p: any) => {
+        try {
+            await api.updateMembershipPlan(p.id, { ...p, active: p.active ? 0 : 1 });
+            fetchPlans();
+        } catch (err: any) { alert('Error: ' + err.message); }
     };
 
     if (loading && plans.length === 0) return (
@@ -81,14 +82,17 @@ export default function MembershipPlans() {
                             key={plan.id}
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="glass-panel p-8 rounded-[3rem] border-white/5 group hover:border-amber-500/20 transition-all flex flex-col justify-between"
+                            className={`glass-panel p-8 rounded-[3rem] border-white/5 group hover:border-amber-500/20 transition-all flex flex-col justify-between${plan.active ? '' : ' opacity-50'}`}
                         >
                             <div className="space-y-6">
                                 <div className="flex justify-between items-start">
                                     <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/20">
                                         <Zap className="w-6 h-6 text-amber-500" />
                                     </div>
-                                    <span className="badge-active">Activo</span>
+                                    {plan.active
+                                        ? <span className="badge-active">Activo</span>
+                                        : <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 border border-red-500/20">Inactivo</span>
+                                    }
                                 </div>
 
                                 <div>
@@ -118,10 +122,14 @@ export default function MembershipPlans() {
                                     <Edit2 className="w-4 h-4" /> Editar
                                 </button>
                                 <button
-                                    onClick={() => handleDelete(plan)}
-                                    className="p-3 bg-zinc-800 hover:bg-red-500/20 text-neutral-600 hover:text-red-500 rounded-2xl transition-all"
+                                    onClick={() => handleToggleActive(plan)}
+                                    className={`p-3 rounded-2xl transition-all ${plan.active ? 'bg-green-500/10 hover:bg-green-500/20 text-green-500' : 'bg-zinc-800 hover:bg-zinc-700 text-neutral-500 hover:text-neutral-300'}`}
+                                    title={plan.active ? 'Desactivar plan' : 'Activar plan'}
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    {plan.active
+                                        ? <ToggleRight className="w-5 h-5" />
+                                        : <ToggleLeft className="w-5 h-5" />
+                                    }
                                 </button>
                             </div>
                         </motion.div>

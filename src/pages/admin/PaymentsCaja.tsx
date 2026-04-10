@@ -3,9 +3,12 @@ import { api } from '../../api/client';
 import {
     Plus, Search, DollarSign, CreditCard, Wallet,
     ArrowRightLeft, FileText, TrendingUp, ShieldCheck, X, Save,
-    Calendar, Filter
+    Filter, Users, BarChart2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
+} from 'recharts';
 import StatCard from '../../components/StatCard';
 
 export default function PaymentsCaja() {
@@ -13,9 +16,11 @@ export default function PaymentsCaja() {
     const [summary, setSummary] = useState<any>(null);
     const [clients, setClients] = useState<any[]>([]);
     const [membershipPlans, setMembershipPlans] = useState<any[]>([]);
+    const [staff, setStaff] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filterMonth, setFilterMonth] = useState('');
+    const [filterTrainer, setFilterTrainer] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -36,27 +41,73 @@ export default function PaymentsCaja() {
             api.getDailySummary(today),
             api.getClients(),
             api.getMembershipPlans(),
-        ]).then(([payRes, sumRes, clientsRes, plansRes]) => {
+            api.getStaff(),
+        ]).then(([payRes, sumRes, clientsRes, plansRes, staffRes]) => {
             setPayments(payRes.data || []);
             setSummary(sumRes.data);
             setClients(clientsRes.data || []);
             setMembershipPlans(plansRes.data || []);
+            setStaff(staffRes.data || []);
             setLoading(false);
         }).catch(() => setLoading(false));
     };
 
     useEffect(() => { fetchData(); }, []);
 
+    // Build set of client_ids belonging to selected trainer
+    const trainerClientIds = useMemo(() => {
+        if (!filterTrainer) return null;
+        const tid = parseInt(filterTrainer);
+        return new Set(clients.filter(c => c.trainer_id === tid).map(c => c.id));
+    }, [filterTrainer, clients]);
+
     const filtered = useMemo(() => {
         return payments.filter(p => {
             const name = `${p.name} ${p.lastname}`.toLowerCase();
             const matchSearch = !search || name.includes(search.toLowerCase()) || String(p.id).includes(search);
             const matchMonth = !filterMonth || p.created_at?.startsWith(filterMonth);
-            return matchSearch && matchMonth;
+            const matchTrainer = !trainerClientIds || trainerClientIds.has(p.client_id);
+            return matchSearch && matchMonth && matchTrainer;
         });
-    }, [payments, search, filterMonth]);
+    }, [payments, search, filterMonth, trainerClientIds]);
 
     const totalFiltered = filtered.reduce((acc, p) => acc + parseFloat(p.final_amount || 0), 0);
+
+    // Stats
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = today.substring(0, 7);
+    const totalAllTime = payments.reduce((a, p) => a + parseFloat(p.final_amount || 0), 0);
+    const totalThisMonth = payments.filter(p => p.created_at?.startsWith(thisMonth)).reduce((a, p) => a + parseFloat(p.final_amount || 0), 0);
+    const totalToday = payments.filter(p => p.created_at?.startsWith(today)).reduce((a, p) => a + parseFloat(p.final_amount || 0), 0);
+
+    // Per-method breakdown (all time)
+    const methodBreakdown = useMemo(() => {
+        const map: Record<string, number> = {};
+        payments.forEach(p => {
+            const m = p.method || 'Otro';
+            map[m] = (map[m] || 0) + parseFloat(p.final_amount || 0);
+        });
+        return Object.entries(map).map(([method, total]) => ({ method, total }));
+    }, [payments]);
+
+    // Monthly chart data (last 6 months)
+    const monthlyChartData = useMemo(() => {
+        const map: Record<string, number> = {};
+        payments.forEach(p => {
+            if (!p.created_at) return;
+            const m = p.created_at.substring(0, 7);
+            map[m] = (map[m] || 0) + parseFloat(p.final_amount || 0);
+        });
+        const sorted = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+        const last6 = sorted.slice(-6);
+        return last6.map(([month, total]) => ({
+            month: month.replace(/^(\d{4})-(\d{2})$/, (_, y, m) => {
+                const names = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+                return `${names[parseInt(m) - 1]} ${y.slice(2)}`;
+            }),
+            total,
+        }));
+    }, [payments]);
 
     const selectedPlan = membershipPlans.find(p => p.id === parseInt(form.plan_id));
     const discount = parseFloat(form.discount) || 0;
@@ -77,7 +128,6 @@ export default function PaymentsCaja() {
                 notes: form.notes || null,
             };
             if (form.plan_id) {
-                // Also assign membership
                 await api.assignMembership({
                     client_id: parseInt(form.client_id),
                     plan_id: parseInt(form.plan_id),
@@ -102,6 +152,21 @@ export default function PaymentsCaja() {
         return Array.from(months).sort().reverse();
     }, [payments]);
 
+    // Trainers from staff
+    const trainers = useMemo(() => staff.filter(s => s.role === 'trainer' || s.role === 'entrenador' || true), [staff]);
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="glass-panel px-4 py-3 rounded-2xl border-amber-500/20 text-xs">
+                    <p className="font-black uppercase tracking-widest text-amber-400 mb-1">{label}</p>
+                    <p className="font-display font-black text-white italic">${payload[0].value.toLocaleString('es-AR')}</p>
+                </div>
+            );
+        }
+        return null;
+    };
+
     if (loading) return (
         <div className="text-amber-500 font-display animate-pulse p-20 text-3xl tracking-[0.5em] font-black uppercase text-center w-full">
             Sincronizando Caja...
@@ -121,11 +186,20 @@ export default function PaymentsCaja() {
                 </button>
             </div>
 
-            {/* Daily Summary */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <StatCard title="Recaudado Hoy" value={`$${totalToday.toLocaleString('es-AR')}`} icon={DollarSign} />
+                <StatCard title="Recaudado Este Mes" value={`$${totalThisMonth.toLocaleString('es-AR')}`} icon={TrendingUp} />
+                <StatCard title="Total Histórico" value={`$${totalAllTime.toLocaleString('es-AR')}`} icon={ShieldCheck} />
+                <StatCard title="Total Transacciones" value={payments.length.toString()} icon={ArrowRightLeft} />
+            </div>
+
+            {/* Daily Summary + Method Breakdown + Chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* Daily summary */}
                 <div className="glass-panel p-7 rounded-[2.5rem] bg-amber-500/5 border-amber-500/10 flex flex-col justify-between">
                     <div>
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500 mb-2">Total Recaudado Hoy</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500 mb-2">Resumen del Día</h4>
                         <p className="text-4xl font-display font-black text-white italic tracking-widest">
                             ${summary?.total?.toLocaleString('es-AR') || '0'}
                         </p>
@@ -140,14 +214,58 @@ export default function PaymentsCaja() {
                     </div>
                 </div>
 
-                <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-5">
-                    <StatCard title="Total Transacciones" value={payments.length.toString()} icon={ArrowRightLeft} />
-                    <StatCard
-                        title="Ingresos Totales"
-                        value={`$${payments.reduce((a, p) => a + parseFloat(p.final_amount || 0), 0).toLocaleString('es-AR')}`}
-                        icon={TrendingUp}
-                    />
-                    <StatCard title="Métodos Verificados" value="100%" icon={ShieldCheck} />
+                {/* Per-method all time */}
+                <div className="glass-panel p-7 rounded-[2.5rem] flex flex-col justify-between">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500 mb-4">Por Método (Total)</h4>
+                    <div className="space-y-3 flex-1">
+                        {methodBreakdown.map(({ method, total }) => (
+                            <div key={method} className="space-y-1">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        {method === 'Efectivo' ? <Wallet className="w-3 h-3 text-emerald-500" /> : <CreditCard className="w-3 h-3 text-blue-400" />}
+                                        <span className="text-[9px] font-black uppercase text-neutral-400 tracking-widest">{method}</span>
+                                    </div>
+                                    <span className="text-xs font-display font-bold text-white">${total.toLocaleString('es-AR')}</span>
+                                </div>
+                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-amber-500/60 rounded-full"
+                                        style={{ width: `${totalAllTime ? (total / totalAllTime) * 100 : 0}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Monthly chart */}
+                <div className="glass-panel p-7 rounded-[2.5rem] flex flex-col">
+                    <div className="flex items-center gap-3 mb-5">
+                        <BarChart2 className="w-4 h-4 text-amber-500" />
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500">Ingresos por Mes</h4>
+                    </div>
+                    <div className="flex-1 min-h-[140px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={monthlyChartData} barCategoryGap="30%">
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                                <XAxis
+                                    dataKey="month"
+                                    tick={{ fill: '#525252', fontSize: 9, fontWeight: 900, letterSpacing: 1 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                />
+                                <YAxis
+                                    tick={{ fill: '#525252', fontSize: 8, fontWeight: 900 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
+                                    width={40}
+                                />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(245,158,11,0.05)' }} />
+                                <Bar dataKey="total" fill="rgba(245,158,11,0.7)" radius={[6, 6, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
 
@@ -175,13 +293,26 @@ export default function PaymentsCaja() {
                         ))}
                     </select>
                 </div>
+                <div className="relative">
+                    <Users className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-neutral-600" />
+                    <select
+                        className="form-input pl-12 pr-6 py-4"
+                        value={filterTrainer}
+                        onChange={e => setFilterTrainer(e.target.value)}
+                    >
+                        <option value="">Todos los entrenadores</option>
+                        {trainers.map((t: any) => (
+                            <option key={t.id} value={t.id}>{t.name} {t.lastname}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             {/* Table */}
             <div className="glass-panel rounded-[2.5rem] overflow-hidden border-white/5">
                 <div className="p-6 md:p-8 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <h3 className="text-xl font-display font-black text-white uppercase tracking-widest">Histórico de Cobros</h3>
-                    {(search || filterMonth) && (
+                    {(search || filterMonth || filterTrainer) && (
                         <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">
                             {filtered.length} resultados · Total: ${totalFiltered.toLocaleString('es-AR')}
                         </span>

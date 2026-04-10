@@ -188,6 +188,32 @@ export default function ClientDetail() {
     if (!client) return <div className="text-red-500 p-20 text-center font-body">Cliente no encontrado</div>;
 
     const membershipDaysLeft = membership ? Math.ceil((new Date(membership.end_date).getTime() - Date.now()) / 86400000) : null;
+
+    // Computed stats
+    const totalAttendances = attendances.length;
+    const totalGoals = weeklyGoals.length;
+    const metGoalsCount = weeklyGoals.filter((g: any) => g.met_goal).length;
+    const goalCompletionRate = totalGoals > 0 ? Math.round((metGoalsCount / totalGoals) * 100) : 0;
+
+    // Current streak: consecutive weeks with met_goal from most recent backwards
+    const sortedGoals = [...weeklyGoals].sort((a: any, b: any) => b.week_start.localeCompare(a.week_start));
+    let currentStreak = 0;
+    for (const g of sortedGoals) {
+        if (g.met_goal) currentStreak++;
+        else break;
+    }
+
+    // Membership history: derive from current membership data
+    const membershipHistory = membership ? [
+        {
+            plan_name: membership.plan_name,
+            start_date: membership.start_date,
+            end_date: membership.end_date,
+            price: membership.price,
+            isCurrent: true,
+        }
+    ] : [];
+
     const selectedMemPlan = membershipPlans.find(p => p.id === parseInt(selectedMembershipPlanId));
     const discount = parseFloat(paymentDiscount) || 0;
     const finalAmount = selectedMemPlan ? Math.max(0, parseFloat(selectedMemPlan.price) - discount) : 0;
@@ -212,7 +238,11 @@ export default function ClientDetail() {
                 <div className="flex gap-3">
                     <button
                         onClick={handlePaymentReminder}
-                        className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-2xl hover:bg-amber-500/20 transition-all"
+                        className={`p-3 rounded-2xl transition-all ${
+                            membershipDaysLeft !== null && membershipDaysLeft <= 7
+                                ? 'bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 animate-pulse'
+                                : 'bg-amber-500/10 border border-amber-500/20 text-amber-500 hover:bg-amber-500/20'
+                        }`}
                         title="Enviar recordatorio de pago"
                     >
                         <Bell className="w-5 h-5" />
@@ -473,6 +503,92 @@ export default function ClientDetail() {
                                 <Dumbbell className="w-4 h-4" /> {saving ? 'Asignando...' : 'Asignar Plan'}
                             </button>
                         </div>
+                    </div>
+
+                    {/* Client Stats */}
+                    <div className="glass-panel p-6 md:p-8 rounded-[2.5rem] border-white/5 space-y-5">
+                        <h3 className="text-lg font-display font-black text-white uppercase tracking-widest flex items-center gap-3 border-b border-white/5 pb-5">
+                            <Activity className="w-5 h-5 text-orange-500" /> Estadísticas del Socio
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+                                <p className="text-2xl font-display font-black text-orange-500">{totalAttendances}</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mt-1">Asistencias</p>
+                            </div>
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+                                <p className="text-2xl font-display font-black text-green-400">{goalCompletionRate}%</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mt-1">Objetivos Cumplidos</p>
+                            </div>
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+                                <p className="text-2xl font-display font-black text-amber-400">{currentStreak}</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mt-1">Racha Actual</p>
+                            </div>
+                            <div className={`p-4 rounded-2xl border text-center ${
+                                !membership ? 'bg-white/5 border-white/5' :
+                                membershipDaysLeft! < 0 ? 'bg-red-500/10 border-red-500/20' :
+                                membershipDaysLeft! <= 7 ? 'bg-amber-500/10 border-amber-500/20' :
+                                'bg-green-500/10 border-green-500/20'
+                            }`}>
+                                <p className={`text-sm font-display font-black leading-tight ${
+                                    !membership ? 'text-neutral-500' :
+                                    membershipDaysLeft! < 0 ? 'text-red-400' :
+                                    membershipDaysLeft! <= 7 ? 'text-amber-400' : 'text-green-400'
+                                }`}>
+                                    {!membership ? 'Sin Plan' :
+                                     membershipDaysLeft! < 0 ? 'VENCIDA' :
+                                     membershipDaysLeft! <= 7 ? 'POR VENCER' : 'ACTIVA'}
+                                </p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mt-1">Membresía</p>
+                            </div>
+                        </div>
+                        {totalGoals > 0 && (
+                            <p className="text-[10px] text-neutral-500 font-body uppercase tracking-widest">
+                                {metGoalsCount} de {totalGoals} semanas con objetivo cumplido
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Plan History */}
+                    <div className="glass-panel p-6 md:p-8 rounded-[2.5rem] border-white/5 space-y-5">
+                        <h3 className="text-lg font-display font-black text-white uppercase tracking-widest flex items-center gap-3 border-b border-white/5 pb-5">
+                            <Clock className="w-5 h-5 text-orange-500" /> Historial de Membresía
+                        </h3>
+                        {membershipHistory.length === 0 ? (
+                            <p className="text-[11px] text-neutral-600 font-body uppercase tracking-widest">Sin historial de membresía</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {membershipHistory.map((item, i) => (
+                                    <div key={i} className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                                        item.isCurrent
+                                            ? 'bg-orange-500/5 border-orange-500/20'
+                                            : 'bg-white/5 border-white/5'
+                                    }`}>
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <p className="text-sm font-display font-black text-white uppercase">{item.plan_name}</p>
+                                                {item.isCurrent && (
+                                                    <span className="text-[8px] font-black uppercase tracking-widest bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">
+                                                        Plan Actual
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] text-neutral-500 font-body uppercase tracking-widest">
+                                                {item.start_date
+                                                    ? new Date(item.start_date + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })
+                                                    : '—'}
+                                                {' → '}
+                                                {item.end_date
+                                                    ? new Date(item.end_date + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })
+                                                    : '—'}
+                                            </p>
+                                        </div>
+                                        <p className="text-sm font-display font-bold text-orange-500 shrink-0">
+                                            ${parseFloat(item.price).toLocaleString('es-AR')}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Send Notification */}

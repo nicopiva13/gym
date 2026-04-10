@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { api } from '../../api/client';
 import {
-    UserCheck, Plus, Mail, Phone, X, Save, Edit2, Trash2,
-    Users, Shield, Eye, EyeOff
+    UserCheck, Plus, Mail, Phone, X, Save, Edit2,
+    Users, Eye, EyeOff, Camera, KeyRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -14,11 +14,28 @@ interface Trainer {
     phone?: string;
     role: string;
     active: number;
+    photo_url?: string;
 }
 
 const EMPTY_FORM = {
-    name: '', lastname: '', email: '', phone: '', password: '', role: 'employee'
+    name: '', lastname: '', email: '', phone: '', password: '', role: 'employee', photo_url: ''
 };
+
+// Toggle Switch component
+function ToggleSwitch({ active, onChange, disabled }: { active: boolean; onChange: (val: boolean) => void; disabled?: boolean }) {
+    return (
+        <button
+            type="button"
+            onClick={() => !disabled && onChange(!active)}
+            disabled={disabled}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-40 ${active ? 'bg-green-500' : 'bg-red-500'}`}
+        >
+            <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${active ? 'translate-x-6' : 'translate-x-1'}`}
+            />
+        </button>
+    );
+}
 
 export default function TrainerManagement() {
     const [trainers, setTrainers] = useState<Trainer[]>([]);
@@ -28,13 +45,15 @@ export default function TrainerManagement() {
     const [formData, setFormData] = useState({ ...EMPTY_FORM });
     const [saving, setSaving] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showResetPassword, setShowResetPassword] = useState(false);
     const [error, setError] = useState('');
+    const [togglingId, setTogglingId] = useState<number | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchTrainers = () => {
         setLoading(true);
         api.getStaff()
             .then(res => {
-                // Backend returns employees with role='employee' — show all staff
                 setTrainers((res.data || []).filter((u: Trainer) => u.role === 'employee' || u.role === 'owner'));
             })
             .catch(() => setTrainers([]))
@@ -43,18 +62,51 @@ export default function TrainerManagement() {
 
     useEffect(() => { fetchTrainers(); }, []);
 
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setFormData(prev => ({ ...prev, photo_url: reader.result as string }));
+        };
+        reader.readAsDataURL(file);
+    };
+
     const openCreate = () => {
         setEditingTrainer(null);
         setFormData({ ...EMPTY_FORM });
         setError('');
+        setShowPassword(false);
+        setShowResetPassword(false);
         setShowModal(true);
     };
 
     const openEdit = (t: Trainer) => {
         setEditingTrainer(t);
-        setFormData({ name: t.name, lastname: t.lastname, email: t.email, phone: t.phone || '', password: '', role: t.role });
+        setFormData({ name: t.name, lastname: t.lastname, email: t.email, phone: t.phone || '', password: '', role: t.role, photo_url: t.photo_url || '' });
         setError('');
+        setShowPassword(false);
+        setShowResetPassword(false);
         setShowModal(true);
+    };
+
+    const handleToggleActive = async (t: Trainer) => {
+        setTogglingId(t.id);
+        try {
+            const newActive = !t.active;
+            await api.updateStaff(t.id, {
+                name: t.name,
+                lastname: t.lastname,
+                email: t.email,
+                ...(t.phone ? { phone: t.phone } : {}),
+                role: t.role,
+                active: newActive,
+            });
+            setTrainers(prev => prev.map(tr => tr.id === t.id ? { ...tr, active: newActive ? 1 : 0 } : tr));
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : 'Error al cambiar estado');
+        }
+        setTogglingId(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -65,8 +117,14 @@ export default function TrainerManagement() {
         setError('');
         try {
             if (editingTrainer) {
-                const updateData: Record<string, unknown> = { name: formData.name, lastname: formData.lastname, email: formData.email };
+                const updateData: Record<string, unknown> = {
+                    name: formData.name,
+                    lastname: formData.lastname,
+                    email: formData.email,
+                };
                 if (formData.phone) updateData.phone = formData.phone;
+                if (formData.photo_url) updateData.photo_url = formData.photo_url;
+                if (formData.password) updateData.password = formData.password;
                 await api.updateStaff(editingTrainer.id, updateData);
             } else {
                 await api.createStaff({
@@ -76,6 +134,7 @@ export default function TrainerManagement() {
                     phone: formData.phone || null,
                     password: formData.password,
                     role: formData.role,
+                    ...(formData.photo_url ? { photo_url: formData.photo_url } : {}),
                 });
             }
             setShowModal(false);
@@ -84,16 +143,6 @@ export default function TrainerManagement() {
             setError(err instanceof Error ? err.message : 'Error al guardar');
         }
         setSaving(false);
-    };
-
-    const handleDelete = async (id: number, name: string) => {
-        if (!confirm(`¿Dar de baja a ${name}? Esta acción desactivará su acceso.`)) return;
-        try {
-            await api.deleteStaff(id);
-            fetchTrainers();
-        } catch (err: unknown) {
-            alert(err instanceof Error ? err.message : 'Error al eliminar');
-        }
     };
 
     if (loading) return (
@@ -154,13 +203,18 @@ export default function TrainerManagement() {
                             key={t.id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className={`glass-panel p-8 rounded-[3rem] relative group border-white/5 hover:border-amber-500/20 transition-all overflow-hidden ${!t.active ? 'opacity-60' : ''}`}
+                            className={`glass-panel p-8 rounded-[3rem] relative group border-white/5 hover:border-amber-500/20 transition-all overflow-hidden ${!t.active ? 'opacity-50' : ''}`}
                         >
                             <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-[40px] rounded-full -z-10" />
 
                             <div className="flex flex-col items-center text-center gap-5">
-                                <div className="w-20 h-20 rounded-[2rem] bg-zinc-800 flex items-center justify-center border-2 border-white/5 group-hover:border-amber-500/30 transition-all">
-                                    <UserCheck className="w-10 h-10 text-amber-500/60" />
+                                {/* Avatar */}
+                                <div className="w-20 h-20 rounded-[2rem] bg-zinc-800 flex items-center justify-center border-2 border-white/5 group-hover:border-amber-500/30 transition-all overflow-hidden">
+                                    {t.photo_url ? (
+                                        <img src={t.photo_url} alt={t.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <UserCheck className="w-10 h-10 text-amber-500/60" />
+                                    )}
                                 </div>
 
                                 <div className="w-full">
@@ -191,19 +245,23 @@ export default function TrainerManagement() {
                                 </div>
 
                                 {t.role !== 'owner' && (
-                                    <div className="flex gap-3 w-full">
+                                    <div className="flex gap-3 w-full items-center">
                                         <button
                                             onClick={() => openEdit(t)}
                                             className="flex-1 flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 text-neutral-400 hover:text-white rounded-2xl transition-all text-[10px] font-black uppercase tracking-widest"
                                         >
                                             <Edit2 className="w-4 h-4" /> Editar
                                         </button>
-                                        <button
-                                            onClick={() => handleDelete(t.id, t.name)}
-                                            className="p-3 bg-zinc-800 hover:bg-red-500/20 text-neutral-600 hover:text-red-500 rounded-2xl transition-all"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        <div className="flex flex-col items-center gap-1">
+                                            <ToggleSwitch
+                                                active={!!t.active}
+                                                onChange={() => handleToggleActive(t)}
+                                                disabled={togglingId === t.id}
+                                            />
+                                            <span className={`text-[8px] font-black uppercase tracking-widest ${t.active ? 'text-green-500' : 'text-red-500'}`}>
+                                                {t.active ? 'ON' : 'OFF'}
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -243,6 +301,47 @@ export default function TrainerManagement() {
                             )}
 
                             <form onSubmit={handleSubmit} className="space-y-5">
+                                {/* Photo upload */}
+                                <div className="space-y-2">
+                                    <label className="label-field">Foto del Coach</label>
+                                    <div className="flex items-center gap-5">
+                                        <div className="w-20 h-20 rounded-[1.5rem] bg-zinc-800 border-2 border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                            {formData.photo_url ? (
+                                                <img src={formData.photo_url} alt="preview" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Camera className="w-8 h-8 text-neutral-600" />
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col gap-2 flex-1">
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                capture="environment"
+                                                className="hidden"
+                                                onChange={handlePhotoChange}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="btn-secondary flex items-center gap-2 justify-center py-3 text-[10px]"
+                                            >
+                                                <Camera className="w-4 h-4" />
+                                                {formData.photo_url ? 'Cambiar Foto' : 'Subir Foto'}
+                                            </button>
+                                            {formData.photo_url && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData(prev => ({ ...prev, photo_url: '' }))}
+                                                    className="text-[9px] font-black uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors"
+                                                >
+                                                    Quitar foto
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="label-field">Nombre *</label>
@@ -264,6 +363,7 @@ export default function TrainerManagement() {
                                     <input className="form-input" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="351 555 5555" />
                                 </div>
 
+                                {/* Create: password required */}
                                 {!editingTrainer && (
                                     <div className="space-y-2">
                                         <label className="label-field">Contraseña *</label>
@@ -294,6 +394,49 @@ export default function TrainerManagement() {
                                             <option value="employee">Coach / Entrenador</option>
                                             <option value="owner">Administrador</option>
                                         </select>
+                                    </div>
+                                )}
+
+                                {/* Edit: optional password reset */}
+                                {editingTrainer && (
+                                    <div className="space-y-3 p-5 rounded-2xl bg-white/5 border border-white/5">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowResetPassword(!showResetPassword);
+                                                if (showResetPassword) setFormData(prev => ({ ...prev, password: '' }));
+                                            }}
+                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-500 hover:text-amber-400 transition-colors"
+                                        >
+                                            <KeyRound className="w-4 h-4" />
+                                            {showResetPassword ? 'Cancelar cambio de contraseña' : 'Restablecer Contraseña'}
+                                        </button>
+                                        {showResetPassword && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="space-y-2"
+                                            >
+                                                <label className="label-field">Nueva Contraseña</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type={showPassword ? 'text' : 'password'}
+                                                        className="form-input pr-12"
+                                                        value={formData.password}
+                                                        onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                                        placeholder="Nueva contraseña"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white"
+                                                    >
+                                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        )}
                                     </div>
                                 )}
 

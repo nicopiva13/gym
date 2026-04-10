@@ -4,7 +4,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard, Users, LogOut, Dumbbell,
-    ClipboardList, Menu, X
+    ClipboardList, Menu, X, Wallet
 } from 'lucide-react';
 
 export default function TrainerLayout({ children }: { children: React.ReactNode }) {
@@ -18,6 +18,7 @@ export default function TrainerLayout({ children }: { children: React.ReactNode 
         { path: '/entrenador/clientes', label: 'Mis Clientes', icon: Users },
         { path: '/entrenador/ejercicios', label: 'Biblioteca', icon: Dumbbell },
         { path: '/entrenador/planes', label: 'Planes Entrenamiento', icon: ClipboardList },
+        { path: '/entrenador/caja', label: 'Monitor de Caja', icon: Wallet },
     ];
 
     const isActive = (path: string) =>
