@@ -19,6 +19,7 @@ import ClientManagement from './pages/admin/ClientManagement';
 import MembershipPlans from './pages/admin/MembershipPlans';
 import PaymentsCaja from './pages/admin/PaymentsCaja';
 import GymSettings from './pages/admin/GymSettings';
+import Complaints from './pages/admin/Complaints';
 
 // Trainer Pages
 import TrainerDashboard from './pages/trainer/TrainerDashboard';
@@ -65,6 +66,7 @@ function App() {
           <Route path="/admin/plans" element={<PrivateRoute allowedRole="owner"><MembershipPlans /></PrivateRoute>} />
           <Route path="/admin/payments" element={<PrivateRoute allowedRole="owner"><PaymentsCaja /></PrivateRoute>} />
           <Route path="/admin/settings" element={<PrivateRoute allowedRole="owner"><GymSettings /></PrivateRoute>} />
+          <Route path="/admin/complaints" element={<PrivateRoute allowedRole="owner"><Complaints /></PrivateRoute>} />
 
           {/* TRAINER PORTAL */}
           <Route path="/entrenador" element={<PrivateRoute allowedRole="trainer"><TrainerDashboard /></PrivateRoute>} />

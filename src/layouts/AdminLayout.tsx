@@ -4,7 +4,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard, Users, CreditCard, Settings,
-    LogOut, UserCheck, Calendar, Menu, X
+    LogOut, UserCheck, Calendar, Menu, X, MessageSquare
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +19,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { path: '/admin/clients', label: 'Socios', icon: Users },
         { path: '/admin/plans', label: 'Planes', icon: Calendar },
         { path: '/admin/payments', label: 'Pagos / Caja', icon: CreditCard },
+        { path: '/admin/complaints', label: 'Quejas', icon: MessageSquare },
         { path: '/admin/settings', label: 'Configuración', icon: Settings },
     ];
 

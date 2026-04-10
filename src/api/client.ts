@@ -9,8 +9,7 @@ async function request(path: string, options: RequestInit = {}) {
     };
 
     const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-    
-    // Handle 401 - force logout and redirect to appropriate login
+
     if (response.status === 401) {
         let loginPath = '/usuario/login';
         if (token) {
@@ -24,7 +23,7 @@ async function request(path: string, options: RequestInit = {}) {
         window.location.href = loginPath;
         throw new Error('Sesión expirada. Por favor, ingresá nuevamente.');
     }
-    
+
     const result = await response.json();
 
     if (!response.ok) {
@@ -44,8 +43,8 @@ export const api = {
     // CLIENTS
     getClients: () => request('/clients'),
     getClient: (id: number) => request(`/clients/${id}`),
-    createClient: (data: Record<string, string>) => request('/clients', { method: 'POST', body: JSON.stringify(data) }),
-    updateClient: (id: number, data: Record<string, string>) => request(`/clients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    createClient: (data: Record<string, unknown>) => request('/clients', { method: 'POST', body: JSON.stringify(data) }),
+    updateClient: (id: number, data: Record<string, unknown>) => request(`/clients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     deleteClient: (id: number) => request(`/clients/${id}`, { method: 'DELETE' }),
 
     // EXERCISES
@@ -68,12 +67,12 @@ export const api = {
     deleteDayExercise: (exId: number) => request(`/plan-day-exercises/${exId}`, { method: 'DELETE' }),
     reorderDayExercises: (data: { items: { id: number; sort_order: number }[] }) => request('/plan-day-exercises/reorder', { method: 'PATCH', body: JSON.stringify(data) }),
     deletePlanDay: (dayId: number) => request(`/plan-days/${dayId}`, { method: 'DELETE' }),
-    updateMembershipPlan: (id: number, data: any) => request(`/membership-plans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    deleteMembershipPlan: (id: number) => request(`/membership-plans/${id}`, { method: 'DELETE' }),
 
     // MEMBERSHIPS
     getMembershipPlans: () => request('/membership-plans'),
     createMembershipPlan: (data: Record<string, unknown>) => request('/membership-plans', { method: 'POST', body: JSON.stringify(data) }),
+    updateMembershipPlan: (id: number, data: Record<string, unknown>) => request(`/membership-plans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteMembershipPlan: (id: number) => request(`/membership-plans/${id}`, { method: 'DELETE' }),
     assignMembership: (data: Record<string, unknown>) => request('/client-memberships', { method: 'POST', body: JSON.stringify(data) }),
     getClientMembership: (clientId: number) => request(`/client-memberships/${clientId}`),
 
@@ -90,10 +89,11 @@ export const api = {
     getMyProfile: () => request('/client/me'),
     getMyPlan: () => request('/client/me/plan'),
     getMyMembership: () => request('/client/me/membership'),
-    
+
     // ATTENDANCE
     getAttendances: (clientId?: number) => request(`/attendances${clientId ? `?client_id=${clientId}` : ''}`),
     createAttendance: (data: { client_id: number }) => request('/attendances', { method: 'POST', body: JSON.stringify(data) }),
+    clientSelfCheckin: () => request('/attendances/self', { method: 'POST', body: JSON.stringify({}) }),
 
     // WEEKLY GOALS
     getWeeklyGoals: (clientId: number) => request(`/weekly-goals?client_id=${clientId}`),
@@ -102,4 +102,25 @@ export const api = {
     // SETTINGS
     getSettings: () => request('/settings'),
     updateSettings: (data: Record<string, string>) => request('/settings', { method: 'PUT', body: JSON.stringify(data) }),
+
+    // STAFF
+    getStaff: () => request('/staff'),
+    createStaff: (data: Record<string, unknown>) => request('/staff', { method: 'POST', body: JSON.stringify(data) }),
+    updateStaff: (id: number, data: Record<string, unknown>) => request(`/staff/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteStaff: (id: number) => request(`/staff/${id}`, { method: 'DELETE' }),
+
+    // NOTIFICATIONS
+    getMyNotifications: () => request('/notifications'),
+    getUnreadCount: () => request('/notifications/unread-count'),
+    sendNotification: (data: { recipient_id: number; title: string; message: string; type?: string }) => request('/notifications', { method: 'POST', body: JSON.stringify(data) }),
+    sendBulkNotification: (data: { recipient_ids: number[]; title: string; message: string; type?: string }) => request('/notifications/send-bulk', { method: 'POST', body: JSON.stringify(data) }),
+    markNotificationRead: (id: number) => request(`/notifications/${id}/read`, { method: 'PUT', body: JSON.stringify({}) }),
+    markAllNotificationsRead: () => request('/notifications/read-all', { method: 'PUT', body: JSON.stringify({}) }),
+    getAdminNotifications: () => request('/admin/notifications'),
+
+    // COMPLAINTS
+    submitComplaint: (data: { subject: string; message: string }) => request('/complaints', { method: 'POST', body: JSON.stringify(data) }),
+    getComplaints: () => request('/complaints'),
+    updateComplaint: (id: number, data: { status: string; admin_notes?: string }) => request(`/complaints/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    getMyComplaints: () => request('/complaints/my'),
 };

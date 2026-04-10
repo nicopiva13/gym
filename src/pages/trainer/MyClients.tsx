@@ -6,7 +6,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
-const EMPTY_FORM = { name: '', lastname: '', dni: '', email: '', phone: '', birthdate: '', goal: '' };
+const EMPTY_FORM = { name: '', lastname: '', dni: '', email: '', phone: '', birthdate: '', goal: '', weight_kg: '', height_cm: '', medical_conditions: '', emergency_contact: '', address: '' };
 
 export default function MyClients() {
     const [clients, setClients] = useState<any[]>([]);
@@ -58,6 +58,11 @@ export default function MyClients() {
             phone: c.phone || '',
             birthdate: c.birthdate ? c.birthdate.split('T')[0] : '',
             goal: c.goal || '',
+            weight_kg: c.weight_kg ? String(c.weight_kg) : '',
+            height_cm: c.height_cm ? String(c.height_cm) : '',
+            medical_conditions: c.medical_conditions || '',
+            emergency_contact: c.emergency_contact || '',
+            address: c.address || '',
         });
         setShowModal(true);
     };
@@ -262,7 +267,33 @@ export default function MyClients() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Objetivo</label>
-                                    <textarea className="form-input resize-none h-20" value={formData.goal} onChange={e => setFormData({...formData, goal: e.target.value})} placeholder="Ej: Ganar masa muscular..." />
+                                    <textarea className="form-input resize-none h-16" value={formData.goal} onChange={e => setFormData({...formData, goal: e.target.value})} placeholder="Ej: Ganar masa muscular..." />
+                                </div>
+
+                                <div className="border-t border-white/5 pt-5">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-neutral-600 mb-4">Datos Físicos y Médicos</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Peso (kg)</label>
+                                            <input type="number" step="0.1" min="0" className="form-input" value={formData.weight_kg} onChange={e => setFormData({...formData, weight_kg: e.target.value})} placeholder="75.5" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Altura (cm)</label>
+                                            <input type="number" min="0" className="form-input" value={formData.height_cm} onChange={e => setFormData({...formData, height_cm: e.target.value})} placeholder="175" />
+                                        </div>
+                                        <div className="col-span-2 space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Condiciones Médicas</label>
+                                            <textarea className="form-input resize-none h-14" value={formData.medical_conditions} onChange={e => setFormData({...formData, medical_conditions: e.target.value})} placeholder="Ej: Hipertensión, diabetes..." />
+                                        </div>
+                                        <div className="col-span-2 space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Contacto de Emergencia</label>
+                                            <input className="form-input" value={formData.emergency_contact} onChange={e => setFormData({...formData, emergency_contact: e.target.value})} placeholder="Nombre y teléfono" />
+                                        </div>
+                                        <div className="col-span-2 space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Dirección</label>
+                                            <input className="form-input" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Calle y número" />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="flex gap-4 pt-4">
                                     <button type="button" onClick={() => { setShowModal(false); setEditingClient(null); }} className="flex-1 btn-secondary">Cancelar</button>
