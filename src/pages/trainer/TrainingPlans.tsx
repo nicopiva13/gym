@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { toast } from '../../utils/toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import { 
     Plus, Search, ClipboardList, Dumbbell, Edit2, Trash2,
     Calendar, ChevronRight, CheckCircle2, Clock, AlertCircle
@@ -12,6 +14,7 @@ export default function TrainingPlans() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [deleting, setDeleting] = useState<number | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => { fetchPlans(); }, []);
@@ -24,14 +27,20 @@ export default function TrainingPlans() {
             .finally(() => setLoading(false));
     };
 
-    const handleDelete = async (id: number, name: string) => {
-        if (!confirm(`¿Eliminar el plan "${name}"?\nEsta acción no se puede deshacer.`)) return;
-        setDeleting(id);
+    const handleDelete = (id: number, name: string) => {
+        setConfirmDelete({ id, name });
+    };
+
+    const doDelete = async () => {
+        if (!confirmDelete) return;
+        setDeleting(confirmDelete.id);
+        setConfirmDelete(null);
         try {
-            await api.deleteTrainingPlan(id);
-            setPlans(prev => prev.filter(p => p.id !== id));
+            await api.deleteTrainingPlan(confirmDelete.id);
+            setPlans(prev => prev.filter(p => p.id !== confirmDelete.id));
+            toast.success('Plan eliminado correctamente');
         } catch (err: any) {
-            alert('Error al eliminar: ' + (err.message || 'Intente de nuevo'));
+            toast.error('Error al eliminar: ' + (err.message || 'Intente de nuevo'));
         }
         setDeleting(null);
     };
@@ -193,5 +202,15 @@ export default function TrainingPlans() {
                 </AnimatePresence>
             </div>
         </div>
+
+        <ConfirmModal
+            open={!!confirmDelete}
+            title="Eliminar plan"
+            message={`¿Eliminar el plan "${confirmDelete?.name}"? Esta acción no se puede deshacer.`}
+            confirmLabel="Eliminar"
+            danger
+            onConfirm={doDelete}
+            onCancel={() => setConfirmDelete(null)}
+        />
     );
 }

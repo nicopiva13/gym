@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { toast } from '../../utils/toast';
 import { api } from '../../api/client';
 import {
     Plus, Search, DollarSign, CreditCard, Wallet,
@@ -116,7 +117,7 @@ export default function PaymentsCaja() {
 
     const handleSavePayment = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.client_id || !finalAmount) { alert('Socio y monto son obligatorios'); return; }
+        if (!form.client_id || !finalAmount) { toast.warning('Socio y monto son obligatorios'); return; }
         setSaving(true);
         try {
             const paymentData: Record<string, unknown> = {
@@ -140,7 +141,7 @@ export default function PaymentsCaja() {
             setForm({ client_id: '', plan_id: '', amount: '', discount: '0', method: 'Efectivo', notes: '' });
             fetchData();
         } catch (err: any) {
-            alert('Error: ' + err.message);
+            toast.error(err.message || 'Error al registrar el pago');
         }
         setSaving(false);
     };

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { toast } from '../../utils/toast';
 import { Plus, Zap, Edit2, ToggleLeft, ToggleRight, X, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -41,7 +42,7 @@ export default function MembershipPlans() {
             setShowModal(false);
             fetchPlans();
         } catch (err: any) {
-            alert('Error: ' + err.message);
+            toast.error(err.message || 'Error al guardar el plan');
         }
         setSaving(false);
     };
@@ -50,7 +51,7 @@ export default function MembershipPlans() {
         try {
             await api.updateMembershipPlan(p.id, { ...p, active: p.active ? 0 : 1 });
             fetchPlans();
-        } catch (err: any) { alert('Error: ' + err.message); }
+        } catch (err: any) { toast.error(err.message || 'Error al cambiar estado'); }
     };
 
     if (loading && plans.length === 0) return (

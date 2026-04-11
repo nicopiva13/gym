@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
+import { toast } from '../../utils/toast';
 import {
     ArrowRight, ArrowLeft, Dumbbell,
     Save, Trash2, ChevronRight, Search, Plus, X, Loader2
@@ -82,7 +83,7 @@ export default function PlanBuilder() {
                 );
                 setDays(loadedDays);
             } catch {
-                alert('Error cargando el plan');
+                toast.error('Error cargando el plan');
                 navigate('/entrenador/planes');
             }
             setLoading(false);
@@ -137,7 +138,7 @@ export default function PlanBuilder() {
 
     const handleSavePlan = async (status: 'draft' | 'active' = planStatus) => {
         if (!planName.trim()) {
-            alert('El nombre del plan es obligatorio');
+            toast.warning('El nombre del plan es obligatorio');
             setStep(1);
             return;
         }
@@ -197,10 +198,10 @@ export default function PlanBuilder() {
                 }
             }
 
-            alert(`✅ Plan "${planName}" ${isEditing ? 'actualizado' : 'guardado'} correctamente!`);
+            toast.success(`Plan "${planName}" ${isEditing ? 'actualizado' : 'guardado'} correctamente`);
             navigate('/entrenador/planes');
         } catch (err: unknown) {
-            alert('Error al guardar: ' + (err instanceof Error ? err.message : 'Error desconocido'));
+            toast.error('Error al guardar: ' + (err instanceof Error ? err.message : 'Error desconocido'));
         }
         setSaving(false);
     };
@@ -260,7 +261,7 @@ export default function PlanBuilder() {
                 {[{ n: 1, label: 'Configuración' }, { n: 2, label: 'Ejercicios' }].map(({ n, label }) => (
                     <button
                         key={n}
-                        onClick={() => { if (n === 2 && !planName.trim()) { alert('Ingresá el nombre del plan'); return; } setStep(n); }}
+                        onClick={() => { if (n === 2 && !planName.trim()) { toast.warning('Ingresá el nombre del plan'); return; } setStep(n); }}
                         className={`flex items-center gap-2 ${step === n ? 'text-white' : 'text-neutral-600'}`}
                     >
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center font-display font-bold border-2 transition-all text-sm ${step === n ? 'bg-orange-500 border-orange-500 text-black' : 'border-white/10'}`}>
@@ -302,7 +303,7 @@ export default function PlanBuilder() {
                         </div>
                         <button
                             onClick={() => {
-                                if (!planName.trim()) { alert('El nombre del plan es obligatorio'); return; }
+                                if (!planName.trim()) { toast.warning('El nombre del plan es obligatorio'); return; }
                                 setStep(2);
                             }}
                             className="w-full btn-primary flex justify-center items-center gap-3 py-4"

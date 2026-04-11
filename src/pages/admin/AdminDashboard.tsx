@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { toast } from '../../utils/toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import {
     Users, CreditCard, TrendingUp, AlertTriangle,
     BarChart3, ArrowUpRight, UsersRound, Bell
@@ -18,6 +20,7 @@ export default function AdminDashboard() {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [sendingReminders, setSendingReminders] = useState(false);
+    const [confirmReminders, setConfirmReminders] = useState(false);
 
     useEffect(() => {
         api.getOwnerDashboard().then(res => {
@@ -26,25 +29,30 @@ export default function AdminDashboard() {
         }).catch(() => setLoading(false));
     }, []);
 
-    const handleSendReminders = async () => {
+    const handleSendReminders = () => {
         const expiring = stats?.upcoming_expirations || [];
-        if (expiring.length === 0) { alert('No hay socios próximos a vencer'); return; }
-        if (!confirm(`¿Enviar recordatorio de pago a ${expiring.length} socios?`)) return;
+        if (expiring.length === 0) { toast.info('No hay socios próximos a vencer'); return; }
+        setConfirmReminders(true);
+    };
+
+    const doSendReminders = useCallback(async () => {
+        setConfirmReminders(false);
+        const expiring = stats?.upcoming_expirations || [];
         setSendingReminders(true);
         try {
             const ids = expiring.map((m: any) => m.id);
             await api.sendBulkNotification({
                 recipient_ids: ids,
-                title: '⚠️ Tu membresía está por vencer',
+                title: 'Tu membresía está por vencer',
                 message: 'Tu membresía vence pronto. Recordá renovarla para seguir entrenando sin interrupciones.',
                 type: 'membership_expiry',
             });
-            alert(`✅ Recordatorios enviados a ${ids.length} socios`);
+            toast.success(`Recordatorios enviados a ${ids.length} socios`);
         } catch (err: any) {
-            alert('Error: ' + err.message);
+            toast.error('Error al enviar recordatorios: ' + err.message);
         }
         setSendingReminders(false);
-    };
+    }, [stats]);
 
     if (loading) return (
         <div className="min-h-[60vh] flex items-center justify-center text-amber-500 font-display text-2xl tracking-[0.3em] font-black animate-pulse uppercase">
@@ -198,5 +206,14 @@ export default function AdminDashboard() {
                 </div>
             </div>
         </div>
+
+        <ConfirmModal
+            open={confirmReminders}
+            title="Enviar recordatorios"
+            message={`Se enviará una notificación a ${stats?.upcoming_expirations?.length || 0} socios cuya membresía está por vencer.`}
+            confirmLabel="Enviar"
+            onConfirm={doSendReminders}
+            onCancel={() => setConfirmReminders(false)}
+        />
     );
 }

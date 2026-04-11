@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { api } from '../../api/client';
+import { toast } from '../../utils/toast';
 import {
     UserCheck, Plus, Mail, Phone, X, Save, Edit2,
     Users, Eye, EyeOff, Camera, KeyRound
@@ -104,7 +105,7 @@ export default function TrainerManagement() {
             });
             setTrainers(prev => prev.map(tr => tr.id === t.id ? { ...tr, active: newActive ? 1 : 0 } : tr));
         } catch (err: unknown) {
-            alert(err instanceof Error ? err.message : 'Error al cambiar estado');
+            toast.error(err instanceof Error ? err.message : 'Error al cambiar estado');
         }
         setTogglingId(null);
     };

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { api } from '../../api/client';
+import { toast } from '../../utils/toast';
 import {
     Users, Search, Plus, ChevronRight, CheckCircle2, Clock, AlertCircle, X, Save, Edit2, Camera, ToggleLeft, ToggleRight
 } from 'lucide-react';
@@ -109,7 +110,7 @@ export default function MyClients() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.name || !formData.lastname || !formData.dni) {
-            alert('Nombre, apellido y DNI son obligatorios');
+            toast.warning('Nombre, apellido y DNI son obligatorios');
             return;
         }
         setSaving(true);
@@ -139,7 +140,7 @@ export default function MyClients() {
             closeModal();
             fetchClients();
         } catch (err: any) {
-            alert((editingClient ? 'Error al actualizar: ' : 'Error al crear: ') + (err.message || 'Intente de nuevo'));
+            toast.error((editingClient ? 'Error al actualizar: ' : 'Error al crear: ') + (err.message || 'Intente de nuevo'));
         }
         setSaving(false);
     };
@@ -150,7 +151,7 @@ export default function MyClients() {
             await api.updateClient(c.id, { ...c, active: c.active ? 0 : 1 } as Record<string, unknown>);
             fetchClients();
         } catch {
-            alert('Error al cambiar estado');
+            toast.error('Error al cambiar estado del socio');
         }
         setTogglingId(null);
     };

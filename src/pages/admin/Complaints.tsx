@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { toast } from '../../utils/toast';
 import { MessageSquare, CheckCircle2, Clock, AlertCircle, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -38,7 +39,7 @@ export default function Complaints() {
             await api.updateComplaint(id, { status, admin_notes: notes[id] || '' });
             fetchComplaints();
         } catch (err: any) {
-            alert('Error: ' + err.message);
+            toast.error(err.message || 'Error al actualizar la queja');
         }
         setSaving(null);
     };

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
+import { toast } from '../../utils/toast';
 import {
     ArrowLeft, User, Calendar, Trophy, ClipboardList, Save,
     Clock, AlertCircle, UserCheck, Hash, CheckCircle2, XCircle,
@@ -86,7 +87,7 @@ export default function ClientDetail() {
             setSelectedPlanId('');
             await loadData();
         } catch (err: unknown) {
-            alert('Error: ' + (err instanceof Error ? err.message : 'No se pudo asignar'));
+            toast.error(err instanceof Error ? err.message : 'No se pudo asignar');
         }
         setSaving(false);
     };
@@ -98,7 +99,7 @@ export default function ClientDetail() {
             await api.createAttendance({ client_id: parseInt(id) });
             await loadData();
         } catch (err: unknown) {
-            alert('Error: ' + (err instanceof Error ? err.message : 'No se pudo registrar'));
+            toast.error(err instanceof Error ? err.message : 'No se pudo registrar');
         }
         setCheckingIn(false);
     };
@@ -110,7 +111,7 @@ export default function ClientDetail() {
             await api.setWeeklyGoal({ client_id: parseInt(id), week_start: weekStart, met_goal: metGoal ? 1 : 0, note: goalNote });
             await loadData();
         } catch (err: unknown) {
-            alert('Error: ' + (err instanceof Error ? err.message : 'No se pudo guardar'));
+            toast.error(err instanceof Error ? err.message : 'No se pudo guardar');
         }
         setSavingGoal(false);
     };
@@ -144,9 +145,9 @@ export default function ClientDetail() {
             setSelectedMembershipPlanId('');
             setPaymentDiscount('0');
             await loadData();
-            alert('✅ Membresía y pago registrados correctamente');
+            toast.success('Membresía y pago registrados correctamente');
         } catch (err: unknown) {
-            alert('Error: ' + (err instanceof Error ? err.message : 'No se pudo registrar'));
+            toast.error(err instanceof Error ? err.message : 'No se pudo registrar');
         }
         setSavingMembership(false);
     };
@@ -161,9 +162,9 @@ export default function ClientDetail() {
                 message: notifMessage.trim(),
             });
             setNotifMessage('');
-            alert('✅ Notificación enviada al socio');
+            toast.success('Notificación enviada al socio');
         } catch (err: unknown) {
-            alert('Error: ' + (err instanceof Error ? err.message : 'No se pudo enviar'));
+            toast.error(err instanceof Error ? err.message : 'No se pudo enviar');
         }
         setSendingNotif(false);
     };
@@ -176,9 +177,9 @@ export default function ClientDetail() {
                 ? `Tu membresía "${membership.plan_name}" vence en ${daysLeft} días. Recordá renovarla para seguir entrenando.`
                 : `Tu membresía ha vencido. Acercate a renovarla para seguir entrenando.`;
             await api.sendNotification({ recipient_id: parseInt(id), title: '⚠️ Recordatorio de Pago', message: msg });
-            alert('✅ Recordatorio enviado');
+            toast.success('Recordatorio enviado correctamente');
         } catch (err: unknown) {
-            alert('Error: ' + (err instanceof Error ? err.message : 'No se pudo enviar'));
+            toast.error(err instanceof Error ? err.message : 'No se pudo enviar');
         }
     };
 

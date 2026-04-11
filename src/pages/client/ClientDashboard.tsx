@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { toast } from '../../utils/toast';
 import {
     Calendar, Dumbbell, Clock, PlayCircle,
     CheckCircle2, AlertCircle, Timer, Weight,
@@ -81,7 +82,7 @@ export default function ClientDashboard() {
             if (err.message?.includes('409') || err.message?.includes('hoy')) {
                 setCheckedInToday(true);
             } else {
-                alert('Error: ' + err.message);
+                toast.error('Error al registrar asistencia: ' + err.message);
             }
         }
         setCheckingIn(false);
@@ -101,9 +102,9 @@ export default function ClientDashboard() {
             await api.submitComplaint(complaint);
             setComplaint({ subject: '', message: '' });
             setShowComplaintForm(false);
-            alert('✅ Comentario enviado de forma anónima. ¡Gracias por tu feedback!');
+            toast.success('Comentario enviado de forma anónima. Gracias por tu feedback!');
         } catch (err: any) {
-            alert('Error: ' + err.message);
+            toast.error('Error al enviar: ' + err.message);
         }
         setSendingComplaint(false);
     };

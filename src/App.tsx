@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import React from 'react';
+import Toast from './components/Toast';
 
 // Auth Pages
 import AdminLogin from './pages/auth/LoginAdmin';
@@ -54,6 +55,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <Toast />
         <Routes>
           {/* LOGIN ROUTES */}
           <Route path="/admin/login" element={<AdminLogin />} />

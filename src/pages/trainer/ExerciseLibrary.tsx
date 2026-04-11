@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { toast } from '../../utils/toast';
 import {
     Plus, Search, Dumbbell, Youtube,
     Edit2, PlayCircle, ChevronDown, ChevronRight,
@@ -56,7 +57,7 @@ export default function ExerciseLibrary() {
             fetchExercises();
             resetForm();
         } catch (err) {
-            alert('Error al guardar');
+            toast.error('Error al guardar el ejercicio');
         }
     };
 
@@ -66,7 +67,7 @@ export default function ExerciseLibrary() {
             await api.deleteExercise(ex.id);
             fetchExercises();
         } catch (err: any) {
-            alert('Error al archivar: ' + (err.message || 'Intente de nuevo'));
+            toast.error('Error al archivar: ' + (err.message || 'Intente de nuevo'));
         }
     };
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { toast } from '../../utils/toast';
 import { 
     Settings, 
     Globe, 
@@ -35,8 +36,8 @@ export default function GymSettings() {
         setSaving(true);
         try {
             await api.updateSettings(settings);
-            alert('¡Configuración guardada exitosamente!');
-        } catch (err) { alert('Error al guardar'); }
+            toast.success('Configuración guardada exitosamente');
+        } catch (err) { toast.error('Error al guardar la configuración'); }
         setSaving(false);
     };
 
