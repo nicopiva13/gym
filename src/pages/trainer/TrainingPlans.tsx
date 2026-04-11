@@ -63,6 +63,7 @@ export default function TrainingPlans() {
     );
 
     return (
+        <>
         <div className="space-y-6 md:space-y-10">
             {/* Header */}
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-end">
@@ -212,5 +213,6 @@ export default function TrainingPlans() {
             onConfirm={doDelete}
             onCancel={() => setConfirmDelete(null)}
         />
+        </>
     );
 }

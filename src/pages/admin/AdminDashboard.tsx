@@ -65,6 +65,7 @@ export default function AdminDashboard() {
     const upcoming = stats?.upcoming_expirations || [];
 
     return (
+        <>
         <div className="space-y-8">
             {/* Header */}
             <div>
@@ -215,5 +216,6 @@ export default function AdminDashboard() {
             onConfirm={doSendReminders}
             onCancel={() => setConfirmReminders(false)}
         />
+        </>
     );
 }

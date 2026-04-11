@@ -12,7 +12,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { api } from "../../services/api";
+import { api } from "../../api/client";
+import { toast } from "../../utils/toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
