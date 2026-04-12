@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { api } from '../../api/client';
 import { toast } from '../../utils/toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import {
     UserCheck, Plus, Mail, Phone, X, Save, Edit2,
     Users, Eye, EyeOff, Camera, KeyRound
@@ -49,6 +50,7 @@ export default function TrainerManagement() {
     const [showResetPassword, setShowResetPassword] = useState(false);
     const [error, setError] = useState('');
     const [togglingId, setTogglingId] = useState<number | null>(null);
+    const [confirmToggle, setConfirmToggle] = useState<Trainer | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchTrainers = () => {
@@ -91,7 +93,14 @@ export default function TrainerManagement() {
         setShowModal(true);
     };
 
-    const handleToggleActive = async (t: Trainer) => {
+    const handleToggleActive = (t: Trainer) => {
+        setConfirmToggle(t);
+    };
+
+    const doToggleActive = async () => {
+        if (!confirmToggle) return;
+        const t = confirmToggle;
+        setConfirmToggle(null);
         setTogglingId(t.id);
         try {
             const newActive = !t.active;
@@ -459,6 +468,20 @@ export default function TrainerManagement() {
                     </div>
                 )}
             </AnimatePresence>
+
+            <ConfirmModal
+                open={!!confirmToggle}
+                title={confirmToggle?.active ? 'Deshabilitar coach' : 'Habilitar coach'}
+                message={
+                    confirmToggle?.active
+                        ? `¿Deshabilitar a ${confirmToggle?.name} ${confirmToggle?.lastname}? No podrá acceder al panel.`
+                        : `¿Habilitar a ${confirmToggle?.name} ${confirmToggle?.lastname}?`
+                }
+                confirmLabel={confirmToggle?.active ? 'Deshabilitar' : 'Habilitar'}
+                danger={!!confirmToggle?.active}
+                onConfirm={doToggleActive}
+                onCancel={() => setConfirmToggle(null)}
+            />
         </div>
     );
 }

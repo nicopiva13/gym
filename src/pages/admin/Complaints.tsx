@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { api } from '../../api/client';
 import { toast } from '../../utils/toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import { MessageSquare, CheckCircle2, Clock, AlertCircle, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -22,18 +23,45 @@ export default function Complaints() {
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [notes, setNotes] = useState<Record<number, string>>({});
     const [saving, setSaving] = useState<number | null>(null);
+    const [confirmUpdate, setConfirmUpdate] = useState<{ id: number; status: string } | null>(null);
+    const knownIdsRef = useRef<Set<number>>(new Set());
 
-    const fetchComplaints = () => {
-        setLoading(true);
+    const fetchComplaints = (silent = false) => {
+        if (!silent) setLoading(true);
         api.getComplaints().then(res => {
-            setComplaints(res.data || []);
-            setLoading(false);
-        }).catch(() => setLoading(false));
+            const data: any[] = res.data || [];
+            // detect new complaints for toast when polling
+            if (silent && knownIdsRef.current.size > 0) {
+                const newOnes = data.filter(c => !knownIdsRef.current.has(c.id));
+                if (newOnes.length > 0) {
+                    toast.info(`${newOnes.length} nueva${newOnes.length > 1 ? 's' : ''} queja${newOnes.length > 1 ? 's' : ''} recibida${newOnes.length > 1 ? 's' : ''}`);
+                }
+            }
+            knownIdsRef.current = new Set(data.map(c => c.id));
+            setComplaints(data);
+            if (!silent) setLoading(false);
+        }).catch(() => { if (!silent) setLoading(false); });
     };
 
-    useEffect(() => { fetchComplaints(); }, []);
+    useEffect(() => {
+        fetchComplaints();
+        const interval = setInterval(() => fetchComplaints(true), 15000);
+        const handleVisibility = () => { if (!document.hidden) fetchComplaints(true); };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, []);
 
-    const handleUpdate = async (id: number, status: string) => {
+    const handleUpdate = (id: number, status: string) => {
+        setConfirmUpdate({ id, status });
+    };
+
+    const doUpdate = async () => {
+        if (!confirmUpdate) return;
+        const { id, status } = confirmUpdate;
+        setConfirmUpdate(null);
         setSaving(id);
         try {
             await api.updateComplaint(id, { status, admin_notes: notes[id] || '' });
@@ -56,6 +84,7 @@ export default function Complaints() {
     );
 
     return (
+        <>
         <div className="space-y-10">
             <div>
                 <h1 className="text-4xl md:text-5xl font-display font-black text-white uppercase tracking-widest mb-2">Quejas Anónimas</h1>
@@ -176,5 +205,15 @@ export default function Complaints() {
                 </div>
             )}
         </div>
+
+        <ConfirmModal
+            open={!!confirmUpdate}
+            title="Cambiar estado"
+            message={`¿Marcar esta queja como "${STATUS_LABELS[confirmUpdate?.status || ''] || confirmUpdate?.status}"?`}
+            confirmLabel="Confirmar"
+            onConfirm={doUpdate}
+            onCancel={() => setConfirmUpdate(null)}
+        />
+        </>
     );
 }

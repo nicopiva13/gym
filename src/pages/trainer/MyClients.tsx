@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { api } from '../../api/client';
 import { toast } from '../../utils/toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import {
     Users, Search, Plus, ChevronRight, CheckCircle2, Clock, AlertCircle, X, Save, Edit2, Camera, ToggleLeft, ToggleRight
 } from 'lucide-react';
@@ -21,6 +22,7 @@ export default function MyClients() {
     const [editingClient, setEditingClient] = useState<any>(null);
     const [saving, setSaving] = useState(false);
     const [togglingId, setTogglingId] = useState<number | null>(null);
+    const [confirmToggle, setConfirmToggle] = useState<any>(null);
 
     // Form state
     const [formData, setFormData] = useState({ ...EMPTY_FORM });
@@ -145,10 +147,20 @@ export default function MyClients() {
         setSaving(false);
     };
 
-    const handleToggleActive = async (c: any) => {
+    const handleToggleActive = (c: any) => {
+        setConfirmToggle(c);
+    };
+
+    const doToggleActive = async () => {
+        if (!confirmToggle) return;
+        const c = confirmToggle;
+        setConfirmToggle(null);
         setTogglingId(c.id);
         try {
-            await api.updateClient(c.id, { ...c, active: c.active ? 0 : 1 } as Record<string, unknown>);
+            const res = await api.updateClient(c.id, { ...c, active: c.active ? 0 : 1 } as Record<string, unknown>);
+            if ((res as any)?.renewed) {
+                toast.success('Cliente reactivado. Se registró una renovación de membresía.');
+            }
             fetchClients();
         } catch {
             toast.error('Error al cambiar estado del socio');
@@ -499,6 +511,20 @@ export default function MyClients() {
                     </div>
                 )}
             </AnimatePresence>
+
+            <ConfirmModal
+                open={!!confirmToggle}
+                title={confirmToggle?.active ? 'Deshabilitar socio' : 'Habilitar socio'}
+                message={
+                    confirmToggle?.active
+                        ? `¿Deshabilitar a ${confirmToggle?.name} ${confirmToggle?.lastname}? No podrá acceder a la app.`
+                        : `¿Habilitar a ${confirmToggle?.name} ${confirmToggle?.lastname}?`
+                }
+                confirmLabel={confirmToggle?.active ? 'Deshabilitar' : 'Habilitar'}
+                danger={!!confirmToggle?.active}
+                onConfirm={doToggleActive}
+                onCancel={() => setConfirmToggle(null)}
+            />
         </div>
     );
 }

@@ -88,7 +88,7 @@ function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onCha
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 
-function ClientDetailModal({ client, onClose }: { client: Client; onClose: () => void }) {
+function ClientDetailModal({ client, onClose, staffMap }: { client: Client; onClose: () => void; staffMap: Record<number, string> }) {
     const [attendances, setAttendances] = useState<Attendance[]>([]);
     const [weeklyGoals, setWeeklyGoals] = useState<WeeklyGoal[]>([]);
     const [loadingDetail, setLoadingDetail] = useState(true);
@@ -215,7 +215,7 @@ function ClientDetailModal({ client, onClose }: { client: Client; onClose: () =>
                                 <div className="bg-zinc-900/60 border border-white/5 rounded-2xl p-4">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-neutral-600 mb-1">Entrenador</p>
                                     <p className="text-white font-display font-bold uppercase tracking-widest">
-                                        {client.trainer_id ? `ID #${client.trainer_id}` : 'Sin Asignar'}
+                                        {client.trainer_id ? (staffMap[client.trainer_id] || `ID #${client.trainer_id}`) : 'Sin Asignar'}
                                     </p>
                                 </div>
                             </div>
@@ -301,14 +301,21 @@ function ClientDetailModal({ client, onClose }: { client: Client; onClose: () =>
 
 export default function ClientManagement() {
     const [clients, setClients] = useState<Client[]>([]);
+    const [staff, setStaff] = useState<Record<number, string>>({});
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [togglingId, setTogglingId] = useState<number | null>(null);
 
     useEffect(() => {
-        api.getClients().then(res => {
-            setClients(res.data || []);
+        Promise.all([
+            api.getClients(),
+            api.getStaff(),
+        ]).then(([clientsRes, staffRes]) => {
+            setClients(clientsRes.data || []);
+            const map: Record<number, string> = {};
+            (staffRes.data || []).forEach((s: any) => { map[s.id] = `${s.name} ${s.lastname}`; });
+            setStaff(map);
             setLoading(false);
         }).catch(() => setLoading(false));
     }, []);
@@ -455,7 +462,7 @@ export default function ClientManagement() {
                                         <td className="px-8 py-6 hidden lg:table-cell">
                                             <div className="flex items-center gap-2 text-[10px] font-black text-neutral-500 uppercase tracking-widest">
                                                 <div className="w-2 h-2 rounded-full bg-amber-500/40" />
-                                                {c.trainer_id ? `ID #${c.trainer_id}` : 'Sin Asignar'}
+                                                {c.trainer_id ? (staff[c.trainer_id] || `ID #${c.trainer_id}`) : 'Sin Asignar'}
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 text-center">
@@ -559,6 +566,7 @@ export default function ClientManagement() {
                     <ClientDetailModal
                         client={selectedClient}
                         onClose={() => setSelectedClient(null)}
+                        staffMap={staff}
                     />
                 )}
             </AnimatePresence>

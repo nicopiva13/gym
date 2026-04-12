@@ -4,7 +4,7 @@ import { api } from '../../api/client';
 import {
     Plus, Search, DollarSign, CreditCard, Wallet,
     ArrowRightLeft, FileText, TrendingUp, ShieldCheck, X, Save,
-    Filter, Users, BarChart2
+    Filter, Users, BarChart2, Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -155,6 +155,29 @@ export default function PaymentsCaja() {
 
     // Trainers from staff
     const trainers = useMemo(() => staff.filter(s => s.role === 'trainer' || s.role === 'entrenador' || true), [staff]);
+
+    const handleExportCSV = () => {
+        if (filtered.length === 0) { toast.info('No hay datos para exportar'); return; }
+        const header = ['ID', 'Socio', 'Concepto', 'Monto', 'Descuento', 'Total', 'Método', 'Fecha'];
+        const rows = filtered.map(p => [
+            p.id,
+            `"${p.name} ${p.lastname}"`,
+            `"${p.plan_name || p.notes || ''}"`,
+            parseFloat(p.amount || 0).toFixed(2),
+            parseFloat(p.discount || 0).toFixed(2),
+            parseFloat(p.final_amount || 0).toFixed(2),
+            p.method || '',
+            p.created_at ? new Date(p.created_at).toLocaleDateString('es-AR') : '',
+        ]);
+        const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pagos_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
@@ -312,12 +335,21 @@ export default function PaymentsCaja() {
             {/* Table */}
             <div className="glass-panel rounded-[2.5rem] overflow-hidden border-white/5">
                 <div className="p-6 md:p-8 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <h3 className="text-xl font-display font-black text-white uppercase tracking-widest">Histórico de Cobros</h3>
-                    {(search || filterMonth || filterTrainer) && (
-                        <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">
-                            {filtered.length} resultados · Total: ${totalFiltered.toLocaleString('es-AR')}
-                        </span>
-                    )}
+                    <div>
+                        <h3 className="text-xl font-display font-black text-white uppercase tracking-widest">Histórico de Cobros</h3>
+                        {(search || filterMonth || filterTrainer) && (
+                            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">
+                                {filtered.length} resultados · Total: ${totalFiltered.toLocaleString('es-AR')}
+                            </span>
+                        )}
+                    </div>
+                    <button
+                        onClick={handleExportCSV}
+                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest py-2.5 px-5 bg-zinc-800 hover:bg-zinc-700 text-neutral-400 hover:text-white rounded-xl transition-all shrink-0"
+                        title="Exportar a CSV"
+                    >
+                        <Download className="w-4 h-4" /> Exportar CSV
+                    </button>
                 </div>
 
                 {filtered.length === 0 ? (

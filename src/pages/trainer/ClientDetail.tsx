@@ -2,12 +2,17 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { toast } from '../../utils/toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import {
     ArrowLeft, User, Calendar, Trophy, ClipboardList, Save,
-    Clock, AlertCircle, UserCheck, Hash, CheckCircle2, XCircle,
-    Dumbbell, Activity, CreditCard, Bell, Wallet, ReceiptText
+    Clock, AlertCircle, UserCheck, CheckCircle2, XCircle,
+    Dumbbell, Activity, CreditCard, Bell, ReceiptText,
+    Flame, ChevronDown, ChevronRight as ChevronRightIcon,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
+} from 'recharts';
 
 export default function ClientDetail() {
     const { id } = useParams();
@@ -36,6 +41,14 @@ export default function ClientDetail() {
     // Send notification
     const [notifMessage, setNotifMessage] = useState('');
     const [sendingNotif, setSendingNotif] = useState(false);
+    const [confirmReminder, setConfirmReminder] = useState(false);
+
+    // Historial & Estadísticas section
+    const [statsOpen, setStatsOpen] = useState(false);
+    const [clientStats, setClientStats] = useState<any>(null);
+    const [statsLoading, setStatsLoading] = useState(false);
+    const [statsError, setStatsError] = useState(false);
+    const [expandedPlan, setExpandedPlan] = useState<number | null>(null);
 
     const weekStart = (() => {
         const d = new Date();
@@ -78,6 +91,23 @@ export default function ClientDetail() {
     };
 
     useEffect(() => { loadData(); }, [id]); // eslint-disable-line
+
+    const handleOpenStats = async () => {
+        if (clientStats) { setStatsOpen(v => !v); return; }
+        setStatsOpen(true);
+        setStatsLoading(true);
+        setStatsError(false);
+        try {
+            const res = await api.getClientStats(parseInt(id!));
+            setClientStats(res.data);
+            // Auto-expand active plan
+            const active = res.data?.plan_history?.find((p: any) => p.active);
+            if (active) setExpandedPlan(active.assignment_id);
+        } catch {
+            setStatsError(true);
+        }
+        setStatsLoading(false);
+    };
 
     const handleAssignPlan = async () => {
         if (!selectedPlanId || !id) return;
@@ -169,8 +199,13 @@ export default function ClientDetail() {
         setSendingNotif(false);
     };
 
-    const handlePaymentReminder = async () => {
+    const handlePaymentReminder = () => {
+        setConfirmReminder(true);
+    };
+
+    const doPaymentReminder = async () => {
         if (!id) return;
+        setConfirmReminder(false);
         try {
             const daysLeft = membership ? Math.ceil((new Date(membership.end_date).getTime() - Date.now()) / 86400000) : null;
             const msg = daysLeft !== null && daysLeft >= 0
@@ -220,6 +255,7 @@ export default function ClientDetail() {
     const finalAmount = selectedMemPlan ? Math.max(0, parseFloat(selectedMemPlan.price) - discount) : 0;
 
     return (
+        <>
         <div className="space-y-8">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -549,6 +585,178 @@ export default function ClientDetail() {
                         )}
                     </div>
 
+                    {/* Historial & Estadísticas — collapsible */}
+                    <div className="glass-panel rounded-[2.5rem] border-white/5 overflow-hidden">
+                        <button
+                            onClick={handleOpenStats}
+                            className="w-full flex items-center justify-between p-6 md:p-8 text-left group"
+                        >
+                            <h3 className="text-lg font-display font-black text-white uppercase tracking-widest flex items-center gap-3">
+                                <Activity className="w-5 h-5 text-orange-500" /> Historial &amp; Estadísticas
+                            </h3>
+                            <ChevronDown className={`w-5 h-5 text-neutral-500 transition-transform ${statsOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        <AnimatePresence>
+                        {statsOpen && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.25 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="px-6 md:px-8 pb-8 space-y-6 border-t border-white/5 pt-6">
+                                    {statsLoading && (
+                                        <div className="space-y-3">
+                                            {[1,2,3].map(i => (
+                                                <div key={i} className="h-16 bg-white/5 rounded-2xl animate-pulse" />
+                                            ))}
+                                        </div>
+                                    )}
+                                    {statsError && (
+                                        <div className="text-center py-8 text-red-400 text-sm font-body">
+                                            No se pudieron cargar las estadísticas. Intentá de nuevo.
+                                        </div>
+                                    )}
+                                    {clientStats && !statsLoading && (
+                                        <>
+                                            {/* KPI cards */}
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+                                                    <p className="text-2xl font-display font-black text-orange-500">{clientStats.total_attendances}</p>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mt-1">Total Asistencias</p>
+                                                </div>
+                                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <p className="text-2xl font-display font-black text-orange-500">{clientStats.attendances_this_month}</p>
+                                                        {clientStats.attendances_this_month > clientStats.attendances_last_month && (
+                                                            <span className="text-green-400 text-xs font-black">↑</span>
+                                                        )}
+                                                        {clientStats.attendances_this_month < clientStats.attendances_last_month && (
+                                                            <span className="text-red-400 text-xs font-black">↓</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mt-1">Este Mes</p>
+                                                </div>
+                                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+                                                    <p className={`text-2xl font-display font-black ${clientStats.current_streak >= 5 ? 'text-orange-400' : 'text-orange-500'} flex items-center justify-center gap-1`}>
+                                                        {clientStats.current_streak >= 5 && <Flame className="w-5 h-5" />}
+                                                        {clientStats.current_streak}
+                                                    </p>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mt-1">Racha Actual</p>
+                                                </div>
+                                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+                                                    <p className="text-xl font-display font-black text-orange-500 leading-tight">
+                                                        {clientStats.weekly_goals_met}/{clientStats.weekly_goals_total}
+                                                    </p>
+                                                    <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-orange-500 rounded-full transition-all"
+                                                            style={{ width: clientStats.weekly_goals_total > 0 ? `${Math.round((clientStats.weekly_goals_met / clientStats.weekly_goals_total) * 100)}%` : '0%' }}
+                                                        />
+                                                    </div>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 mt-1">Metas Cumplidas</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Attendance chart */}
+                                            {clientStats.attendance_by_month?.length > 0 && (
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-3">Asistencias por mes</p>
+                                                    <ResponsiveContainer width="100%" height={180}>
+                                                        <BarChart data={clientStats.attendance_by_month.map((m: any) => ({
+                                                            ...m,
+                                                            label: new Date(m.month + '-01').toLocaleString('es-AR', { month: 'short' })
+                                                        }))}>
+                                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                                            <XAxis dataKey="label" tick={{ fill: '#71717a', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                                                            <YAxis hide />
+                                                            <Tooltip
+                                                                contentStyle={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
+                                                                cursor={{ fill: 'rgba(249,115,22,0.08)' }}
+                                                                formatter={(v: any) => [v, 'Asistencias']}
+                                                            />
+                                                            <Bar dataKey="count" fill="#f97316" radius={[6, 6, 0, 0]} />
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            )}
+
+                                            {/* Plan history accordion */}
+                                            {clientStats.plan_history?.length > 0 && (
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-3">Historial de planes</p>
+                                                    <div className="space-y-2">
+                                                        {clientStats.plan_history.map((plan: any) => (
+                                                            <div key={plan.assignment_id} className={`rounded-2xl border overflow-hidden ${plan.active ? 'border-orange-500/30 bg-orange-500/5' : 'border-white/5 bg-white/5'}`}>
+                                                                <button
+                                                                    onClick={() => setExpandedPlan(expandedPlan === plan.assignment_id ? null : plan.assignment_id)}
+                                                                    className="w-full flex items-center justify-between px-4 py-3 text-left"
+                                                                >
+                                                                    <div className="flex items-center gap-3 min-w-0">
+                                                                        {plan.active
+                                                                            ? <span className="text-[8px] font-black uppercase tracking-widest bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full shrink-0">Activo</span>
+                                                                            : <span className="text-[8px] font-black uppercase tracking-widest bg-white/10 text-neutral-500 px-2 py-0.5 rounded-full shrink-0">Finalizado</span>
+                                                                        }
+                                                                        <p className="text-sm font-display font-bold text-white uppercase truncate">{plan.plan_name}</p>
+                                                                        {plan.assigned_at && (
+                                                                            <span className="text-[10px] text-neutral-500 shrink-0 hidden sm:block">
+                                                                                {new Date(plan.assigned_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    {expandedPlan === plan.assignment_id
+                                                                        ? <ChevronDown className="w-4 h-4 text-neutral-500 shrink-0" />
+                                                                        : <ChevronRightIcon className="w-4 h-4 text-neutral-500 shrink-0" />
+                                                                    }
+                                                                </button>
+                                                                <AnimatePresence>
+                                                                {expandedPlan === plan.assignment_id && plan.days?.length > 0 && (
+                                                                    <motion.div
+                                                                        initial={{ height: 0 }}
+                                                                        animate={{ height: 'auto' }}
+                                                                        exit={{ height: 0 }}
+                                                                        className="overflow-hidden"
+                                                                    >
+                                                                        <div className="px-4 pb-3 space-y-2 border-t border-white/5 pt-2">
+                                                                            {plan.days.map((day: any) => (
+                                                                                <div key={day.day_id} className="text-[10px]">
+                                                                                    <p className="font-black uppercase tracking-widest text-orange-500/70 py-1">{day.label}</p>
+                                                                                    {day.exercises.length === 0 ? (
+                                                                                        <p className="text-neutral-600 pl-2">Sin ejercicios</p>
+                                                                                    ) : (
+                                                                                        <ul className="space-y-1 pl-2">
+                                                                                            {day.exercises.map((ex: any, ei: number) => (
+                                                                                                <li key={ei} className="flex items-center justify-between text-neutral-400 font-body">
+                                                                                                    <span>{ex.name}</span>
+                                                                                                    <span className="text-neutral-600">
+                                                                                                        {ex.sets && ex.reps ? `${ex.sets}×${ex.reps}` : ''}
+                                                                                                        {ex.weight_kg > 0 ? ` · ${ex.weight_kg}kg` : ''}
+                                                                                                    </span>
+                                                                                                </li>
+                                                                                            ))}
+                                                                                        </ul>
+                                                                                    )}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </motion.div>
+                                                                )}
+                                                                </AnimatePresence>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                        </AnimatePresence>
+                    </div>
+
                     {/* Plan History */}
                     <div className="glass-panel p-6 md:p-8 rounded-[2.5rem] border-white/5 space-y-5">
                         <h3 className="text-lg font-display font-black text-white uppercase tracking-widest flex items-center gap-3 border-b border-white/5 pb-5">
@@ -614,5 +822,15 @@ export default function ClientDetail() {
                 </div>
             </div>
         </div>
+
+        <ConfirmModal
+            open={confirmReminder}
+            title="Enviar recordatorio"
+            message={`¿Enviar notificación de pago a ${client?.name} ${client?.lastname}?`}
+            confirmLabel="Enviar"
+            onConfirm={doPaymentReminder}
+            onCancel={() => setConfirmReminder(false)}
+        />
+        </>
     );
 }

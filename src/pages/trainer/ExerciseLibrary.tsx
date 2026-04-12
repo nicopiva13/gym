@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { toast } from '../../utils/toast';
+import ConfirmModal from '../../components/ConfirmModal';
 import {
     Plus, Search, Dumbbell, Youtube,
     Edit2, PlayCircle, ChevronDown, ChevronRight,
@@ -16,8 +17,9 @@ export default function ExerciseLibrary() {
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [editingEx, setEditingEx] = useState<any>(null);
-    const [expandedCategories, setExpandedCategories] = useState<string[]>(['Pecho']); // Pecho abierto por defecto
-    
+    const [expandedCategories, setExpandedCategories] = useState<string[]>(['Pecho']);
+    const [confirmArchive, setConfirmArchive] = useState<any>(null);
+
     // Form State
     const [name, setName] = useState('');
     const [muscle, setMuscle] = useState('Pecho');
@@ -61,8 +63,14 @@ export default function ExerciseLibrary() {
         }
     };
 
-    const handleArchive = async (ex: any) => {
-        if (!confirm(`¿Archivar el ejercicio "${ex.name}"? Ya no aparecerá en la biblioteca.`)) return;
+    const handleArchive = (ex: any) => {
+        setConfirmArchive(ex);
+    };
+
+    const doArchive = async () => {
+        if (!confirmArchive) return;
+        const ex = confirmArchive;
+        setConfirmArchive(null);
         try {
             await api.deleteExercise(ex.id);
             fetchExercises();
@@ -98,6 +106,7 @@ export default function ExerciseLibrary() {
     );
 
     return (
+        <>
         <div className="space-y-12 pb-20">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
@@ -297,5 +306,16 @@ export default function ExerciseLibrary() {
                 )}
             </AnimatePresence>
         </div>
+
+        <ConfirmModal
+            open={!!confirmArchive}
+            title="Archivar ejercicio"
+            message={`¿Archivar "${confirmArchive?.name}"? Ya no aparecerá en la biblioteca.`}
+            confirmLabel="Archivar"
+            danger
+            onConfirm={doArchive}
+            onCancel={() => setConfirmArchive(null)}
+        />
+        </>
     );
 }

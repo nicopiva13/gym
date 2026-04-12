@@ -84,6 +84,15 @@ export const api = {
     // DASHBOARD
     getOwnerDashboard: () => request('/dashboard/owner'),
     getTrainerDashboard: () => request('/dashboard/trainer'),
+    getDashboardStats: (params?: { range?: string; trainer_id?: number }) => {
+        const q = new URLSearchParams();
+        if (params?.range) q.set('range', params.range);
+        if (params?.trainer_id) q.set('trainer_id', String(params.trainer_id));
+        return request(`/dashboard/stats${q.toString() ? '?' + q.toString() : ''}`);
+    },
+
+    // CLIENT STATS
+    getClientStats: (clientId: number) => request(`/clients/${clientId}/stats`),
 
     // CLIENT PORTAL
     getMyProfile: () => request('/client/me'),

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from '../../utils/toast';
 import ConfirmModal from '../../components/ConfirmModal';
 import {
@@ -21,13 +21,30 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [sendingReminders, setSendingReminders] = useState(false);
     const [confirmReminders, setConfirmReminders] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    useEffect(() => {
+    const fetchDashboard = useCallback((silent = false) => {
+        if (!silent) setLoading(true);
         api.getOwnerDashboard().then(res => {
             setStats(res.data);
-            setLoading(false);
-        }).catch(() => setLoading(false));
+            setLastUpdated(new Date());
+            if (!silent) setLoading(false);
+        }).catch(() => { if (!silent) setLoading(false); });
     }, []);
+
+    useEffect(() => {
+        fetchDashboard();
+        intervalRef.current = setInterval(() => {
+            if (!document.hidden) fetchDashboard(true);
+        }, 30000);
+        const handleVisibility = () => { if (!document.hidden) fetchDashboard(true); };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [fetchDashboard]);
 
     const handleSendReminders = () => {
         const expiring = stats?.upcoming_expirations || [];
@@ -68,9 +85,16 @@ export default function AdminDashboard() {
         <>
         <div className="space-y-8">
             {/* Header */}
-            <div>
-                <h1 className="text-4xl md:text-5xl font-display font-black text-white uppercase tracking-widest mb-2">Panel de Control</h1>
-                <p className="text-xs font-body font-black text-neutral-500 uppercase tracking-[0.3em]">Gestión Integral del Gimnasio</p>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                <div>
+                    <h1 className="text-4xl md:text-5xl font-display font-black text-white uppercase tracking-widest mb-2">Panel de Control</h1>
+                    <p className="text-xs font-body font-black text-neutral-500 uppercase tracking-[0.3em]">Gestión Integral del Gimnasio</p>
+                </div>
+                {lastUpdated && (
+                    <p className="text-[9px] font-black uppercase tracking-widest text-neutral-700">
+                        Actualizado: {lastUpdated.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </p>
+                )}
             </div>
 
             {/* KPIs */}

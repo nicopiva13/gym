@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { toast } from '../../utils/toast';
 import {
-    Calendar, Dumbbell, Clock, PlayCircle,
+    Calendar, Dumbbell, Clock, Play,
     CheckCircle2, AlertCircle, Timer, Weight,
     Bell, X, UserCheck, MessageSquarePlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import VideoModal from '../../components/VideoModal';
 
 const DAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -23,6 +24,7 @@ export default function ClientDashboard() {
     const [showComplaintForm, setShowComplaintForm] = useState(false);
     const [complaint, setComplaint] = useState({ subject: '', message: '' });
     const [sendingComplaint, setSendingComplaint] = useState(false);
+    const [videoModal, setVideoModal] = useState<{ isOpen: boolean; exercise: any }>({ isOpen: false, exercise: null });
 
     // Notification popup (first unread)
     const [popup, setPopup] = useState<any>(null);
@@ -357,10 +359,13 @@ export default function ClientDashboard() {
                                                 </div>
                                             </div>
                                             {ex.youtube_url && (
-                                                <a href={ex.youtube_url} target="_blank" rel="noreferrer"
-                                                    className="p-2.5 bg-zinc-900 rounded-xl text-red-500/50 hover:text-red-400 transition-colors shrink-0">
-                                                    <PlayCircle className="w-4 h-4" />
-                                                </a>
+                                                <button
+                                                    onClick={() => setVideoModal({ isOpen: true, exercise: ex })}
+                                                    className="flex items-center gap-1.5 px-3 py-2 bg-zinc-900 rounded-xl text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 border border-white/5 hover:border-red-500/20"
+                                                >
+                                                    <Play className="w-3.5 h-3.5 fill-current" />
+                                                    <span className="text-[9px] font-black uppercase tracking-widest">Ver video</span>
+                                                </button>
                                             )}
                                         </div>
                                         <div className="flex gap-2 mt-4 flex-wrap">
@@ -453,6 +458,13 @@ export default function ClientDashboard() {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Video Modal */}
+            <VideoModal
+                isOpen={videoModal.isOpen}
+                exercise={videoModal.exercise}
+                onClose={() => setVideoModal({ isOpen: false, exercise: null })}
+            />
         </div>
     );
 }
